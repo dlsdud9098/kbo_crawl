@@ -124,8 +124,8 @@ if __name__ == '__main__':
     ]
     
     for idx, url in enumerate(urls):
-        if idx <= 1:
-            continue
+        # if idx <= 1:
+        #     continue
         wait, driver = start_driver(url)
         
         if idx == 2:
