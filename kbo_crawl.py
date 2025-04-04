@@ -60,36 +60,12 @@ def take_table(table_element, kbo_year, cur):
         sql = f"INSERT INTO KBO_TABLE ({columns}) VALUES ({values_placeholder})"
         cur.execute(sql, tuple(data.iloc[1:]))  # 데이터를 튜플로 변환하여 실행
         
-    
+
     
 
 if __name__ == '__main__':
     # KBO 홈페이지 연도
     kbo_years = [str(i) for i in range(1982, 2025)]
-    # KBO 팀들 딕셔너리
-    kbo_teams = {
-        'OB': 'OB',
-        '삼성': 'SS',
-        'MBC': 'LG',
-        '해태': 'HT',
-        '롯데': 'LT',
-        '삼미': 'HD',
-        '청보': 'HD',
-        '빙그레': 'HH',
-        '태평양': 'HD',
-        'LG': 'LG',
-        '쌍방울': 'SB',
-        '한화': 'HH',
-        '현대': 'HD',
-        '두산': 'OB',
-        'SK': 'SK',
-        'KIA': 'HT',
-        '우리': 'WO',
-        '넥센': 'WO',
-        'NC': 'NC',
-        'KT': 'KT',
-        '키움': 'WO',
-        'SSG': 'SK'}
     
     wait, driver = start_driver('https://www.koreabaseball.com/Record/Player/HitterBasic/BasicOld.aspx')
     conn, cur = connect_sql()
