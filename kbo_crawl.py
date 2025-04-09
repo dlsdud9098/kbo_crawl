@@ -7,17 +7,22 @@ from selenium.webdriver.support.select import Select
 import time
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException
 import pymysql
 from io import StringIO
 import random
 
 def start_driver(url):
+    options = webdriver.ChromeOptions()
+    # options.add_argument('--headless')
+    options.add_argument('window-size=1024,768')
+    
     # Service 객체를 명시적으로 설정
     service = Service(ChromeDriverManager().install())
 
     # Chrome WebDriver 실행
-    driver = webdriver.Chrome(service=service)
+    driver = webdriver.Chrome(service=service,options=options)
+    driver.set_window_size(1920, 1080) 
 
     # 웹페이지 접속
     driver.get(url)
@@ -57,6 +62,7 @@ def take_table(table_element, kbo_year, cur):
     # - 문자 0으로 바꾸기
     df.replace('-', '0', inplace=True)
     
+    
     # 데이터 삽입하기
     for _, data in df.iterrows():
         columns = ", ".join(df.columns[1:])  # 컬럼 리스트를 문자열로 변환
@@ -67,12 +73,19 @@ def take_table(table_element, kbo_year, cur):
         cur.execute(sql, tuple(data.iloc[1:]))  # 데이터를 튜플로 변환하여 실행
         
 
-def crawl(kbo_years, cur, conn, driver, url):
+def crawl(kbo_years, cur, conn, driver, idx):
     # 다음 기록
-    if url == 'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic2.aspx':
-        driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_udpContent > div.row > div.more_record > a.next').click()
-    
+    # if url == 'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic2.aspx':
+    #     driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_udpContent > div.row > div.more_record > a.next').click()
+        
+    # print(kbo_years)
+    if idx == 1:
+        print(idx)
+        driver.find_element(By.XPATH, '//*[@id="cphContents_cphContents_cphContents_udpContent"]/div[2]/div[2]/a[2]').click()
+        time.sleep(2)
+        
     for kbo_year in kbo_years:
+        
         # 연도 드롭다운 선택
         year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
         year_dropdown.select_by_visible_text(kbo_year)
@@ -85,28 +98,41 @@ def crawl(kbo_years, cur, conn, driver, url):
         # 팀 선택하기
         for kbo_team in kbo_teams:
             print(kbo_year, kbo_team)
-            team_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlTeam_ddlTeam').select_by_value(kbo_team)
+            try:
+                team_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlTeam_ddlTeam').select_by_value(kbo_team)
+            except StaleElementReferenceException or ElementClickInterceptedException:
+                team_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlTeam_ddlTeam').select_by_value(kbo_team)
             time.sleep(.5)
             
             # 테이블 데이터 가져와서 mysql에 삽입하기
-            table_element = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'table')))
+            table_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '/html/body/form/div/section/div/div/div/div/div/table')))
             take_table(table_element, kbo_year, cur)
             
             # 2페이지 찾기
             try:
-                driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_ucPager_btnNo2').click()
+                try:
+                    element = driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_ucPager_btnNo2')
+                    driver.execute_script("arguments[0].click();", element)
+                except StaleElementReferenceException or ElementClickInterceptedException:
+                    driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_ucPager_btnNo2').click()
                 time.sleep(.5)
                 
                 # 페이지에서 테이블 가져오기
-                table_element = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'table')))
+                table_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '/html/body/form/div/section/div/div/div/div/div/table')))
                 take_table(table_element, kbo_year, cur)
                 
-                # 첫 번째 페이지로 돌아가기
-                driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_ucPager_btnNo1').click()
-                time.sleep(.5)
+                try:
+                    # 첫 번째 페이지로 돌아가기
+                    element = driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_ucPager_btnNo1')
+                    driver.execute_script("arguments[0].click();", element)
+                    # driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_ucPager_btnNo1').click()
+                except StaleElementReferenceException or ElementClickInterceptedException:
+                    driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_ucPager_btnNo1').click()
+                time.sleep(1)
                 
             except NoSuchElementException:
                 pass
+            
         conn.commit()
     time.sleep(random.uniform(3, 10))
     driver.quit()
@@ -124,12 +150,14 @@ if __name__ == '__main__':
     ]
     
     for idx, url in enumerate(urls):
-        # if idx <= 1:
-        #     continue
         wait, driver = start_driver(url)
-        
-        if idx == 2:
-            kbo_years = [str(i) for i in range(2002, 2025)]
-        crawl(kbo_years, cur, conn, driver, url)
+        if idx < 2:
+            continue
+        # kbo_years = ["2024"]
+        # print(idx)
+        if idx > 0:
+            kbo_years = [str(i) for i in range(2017, 2025)]
+            
+        crawl(kbo_years, cur, conn, driver, idx)
         driver.quit()
     conn.close()
