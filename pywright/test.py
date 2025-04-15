@@ -28,11 +28,25 @@ async def fetch_table(playwright, idx, url):
         await page.wait_for_selector(team_dropdown_tag_id)
         team_dropdown = await page.query_selector(team_dropdown_tag_id)
         
+        
         # 드롭다운의 요소 모두 불러오기
-        options = await team_dropdown.query_selector_all("option")
-        for option in options:
-            option_text = await option.text_content()
-            option_value = await option.get_attribute("value")
+        # options = await team_dropdown.query_selector_all("option")
+        options = team_dropdown.locator("option")
+        # 옵션 개수 확인 및 데이터 추출
+        count = await options.count()
+        for i in range(count):
+            try:
+                option_text = await options.nth(i).text_content()
+                option_value = await options.nth(i).get_attribute("value")
+                print(f"Year: {kbo_year}, Team: {option_text}, Value: {option_value}")
+            except Exception as e:
+                print(f"Error processing option: {e}")
+        
+        # for option in options:
+        #     option_text = await option.text_content()
+        #     option_value = await option.get_attribute("value")
+        
+        
         # option_text = await [option.text_content() for option in options]
         # option_value = await [option.get_attribute("value") for option in options]
         print(f"Option Text: {option_text}, Value: {option_value}")
