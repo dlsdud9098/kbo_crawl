@@ -77,13 +77,33 @@ def crawl(kbo_years, cur, conn, driver, idx):
     # 다음 기록
     # if url == 'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic2.aspx':
     #     driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_udpContent > div.row > div.more_record > a.next').click()
-        
+    
+    # time.sleep(100)
     # print(kbo_years)
     if idx == 1:
-        print(idx)
-        driver.find_element(By.XPATH, '//*[@id="cphContents_cphContents_cphContents_udpContent"]/div[2]/div[2]/a[2]').click()
-        time.sleep(2)
+        year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
+        year_dropdown.select_by_visible_text('2001')
+        time.sleep(.5)
         
+        year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
+        year_dropdown.select_by_visible_text('2002')
+        time.sleep(.5)
+        
+        driver.find_element(By.XPATH, '/html/body/form/div[3]/section/div/div/div[2]/div[3]/div[2]/div[2]/a[2]').click()
+        time.sleep(1)
+        
+    if idx == 2:
+        year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
+        year_dropdown.select_by_visible_text('2001')
+        time.sleep(.5)
+        
+        year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
+        year_dropdown.select_by_visible_text('2002')
+        time.sleep(.5)
+        
+        driver.find_element(By.XPATH, '/html/body/form/div[3]/section/div/div/div[2]/div[3]/div[2]/div[1]/ul/li[2]/a').click()
+        time.sleep(1)
+    
     for kbo_year in kbo_years:
         
         # 연도 드롭다운 선택
@@ -94,6 +114,8 @@ def crawl(kbo_years, cur, conn, driver, idx):
         # 팀 정보 가져오기
         team_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlTeam_ddlTeam')
         kbo_teams = [option.get_attribute("value") for option in team_dropdown.options[1:]]
+        # kbo_team_names = [option.text for option in team_dropdown.options[1:]]
+        # print(kbo_team_names)
         
         # 팀 선택하기
         for kbo_team in kbo_teams:
@@ -105,7 +127,7 @@ def crawl(kbo_years, cur, conn, driver, idx):
             time.sleep(.5)
             
             # 테이블 데이터 가져와서 mysql에 삽입하기
-            table_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '/html/body/form/div/section/div/div/div/div/div/table')))
+            table_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'table')))
             take_table(table_element, kbo_year, cur)
             
             # 2페이지 찾기
@@ -118,7 +140,7 @@ def crawl(kbo_years, cur, conn, driver, idx):
                 time.sleep(.5)
                 
                 # 페이지에서 테이블 가져오기
-                table_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '/html/body/form/div/section/div/div/div/div/div/table')))
+                table_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'table')))
                 take_table(table_element, kbo_year, cur)
                 
                 try:
@@ -128,7 +150,7 @@ def crawl(kbo_years, cur, conn, driver, idx):
                     # driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_ucPager_btnNo1').click()
                 except StaleElementReferenceException or ElementClickInterceptedException:
                     driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_ucPager_btnNo1').click()
-                time.sleep(1)
+                time.sleep(.5)
                 
             except NoSuchElementException:
                 pass
@@ -145,18 +167,21 @@ if __name__ == '__main__':
 
     urls = [
         'https://www.koreabaseball.com/Record/Player/HitterBasic/BasicOld.aspx',
-        'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic2.aspx',
+        'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic1.aspx',
+        # 'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic2.aspx',
         'https://www.koreabaseball.com/Record/Player/HitterBasic/Detail1.aspx'
     ]
     
     for idx, url in enumerate(urls):
+        # if idx < 2:
+            
+            # driver.quit()
+            # continue
         wait, driver = start_driver(url)
-        if idx < 2:
-            continue
         # kbo_years = ["2024"]
         # print(idx)
         if idx > 0:
-            kbo_years = [str(i) for i in range(2017, 2025)]
+            kbo_years = [str(i) for i in range(2002, 2025)]
             
         crawl(kbo_years, cur, conn, driver, idx)
         driver.quit()
