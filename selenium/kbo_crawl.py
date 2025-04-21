@@ -39,9 +39,16 @@ def connect_sql():
     
     return conn, cur
     
-def select_dropdown(driver, tag):
+def select_dropdown(driver, tag, refresh = 0):
     # 드롭다운 선택
     dropdown_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, tag)))
+    
+    # 페이지 새로고침
+    if refresh == 1:
+        driver.execute_script("location.reload(true);")
+
+        time.sleep(.3)
+        dropdown_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, tag)))
     return Select(dropdown_element)
 
 def take_table(table_element, kbo_year, cur):
@@ -80,39 +87,28 @@ def crawl(kbo_years, cur, conn, driver, idx):
     
     # time.sleep(100)
     # print(kbo_years)
-    if idx == 1:
-        year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
-        year_dropdown.select_by_visible_text('2001')
-        time.sleep(.5)
+    # if idx == 1:
+    #     year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
+    #     year_dropdown.select_by_visible_text('2001')
+    #     time.sleep(.5)
         
-        year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
-        year_dropdown.select_by_visible_text('2002')
-        time.sleep(.5)
+    #     year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
+    #     year_dropdown.select_by_visible_text('2002')
+    #     time.sleep(.5)
         
-        driver.find_element(By.XPATH, '/html/body/form/div[3]/section/div/div/div[2]/div[3]/div[2]/div[2]/a[2]').click()
-        time.sleep(1)
+    #     driver.find_element(By.XPATH, '/html/body/form/div[3]/section/div/div/div[2]/div[3]/div[2]/div[2]/a[2]').click()
+    #     time.sleep(1)
         
-    if idx == 2:
-        year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
-        year_dropdown.select_by_visible_text('2001')
-        time.sleep(.5)
-        
-        year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
-        year_dropdown.select_by_visible_text('2002')
-        time.sleep(.5)
-        
-        driver.find_element(By.XPATH, '/html/body/form/div[3]/section/div/div/div[2]/div[3]/div[2]/div[1]/ul/li[2]/a').click()
-        time.sleep(1)
     
     for kbo_year in kbo_years:
         
         # 연도 드롭다운 선택
         year_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlSeason_ddlSeason')
         year_dropdown.select_by_visible_text(kbo_year)
-        time.sleep(.5)
+        time.sleep(.5)        
         
         # 팀 정보 가져오기
-        team_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlTeam_ddlTeam')
+        team_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlTeam_ddlTeam', 1)
         kbo_teams = [option.get_attribute("value") for option in team_dropdown.options[1:]]
         # kbo_team_names = [option.text for option in team_dropdown.options[1:]]
         # print(kbo_team_names)
@@ -124,7 +120,7 @@ def crawl(kbo_years, cur, conn, driver, idx):
                 team_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlTeam_ddlTeam').select_by_value(kbo_team)
             except StaleElementReferenceException or ElementClickInterceptedException:
                 team_dropdown = select_dropdown(driver, '#cphContents_cphContents_cphContents_ddlTeam_ddlTeam').select_by_value(kbo_team)
-            time.sleep(.5)
+            time.sleep(1)
             
             # 테이블 데이터 가져와서 mysql에 삽입하기
             table_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'table')))
@@ -137,7 +133,7 @@ def crawl(kbo_years, cur, conn, driver, idx):
                     driver.execute_script("arguments[0].click();", element)
                 except StaleElementReferenceException or ElementClickInterceptedException:
                     driver.find_element(By.CSS_SELECTOR, '#cphContents_cphContents_cphContents_ucPager_btnNo2').click()
-                time.sleep(.5)
+                time.sleep(1)
                 
                 # 페이지에서 테이블 가져오기
                 table_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'table')))
@@ -167,16 +163,17 @@ if __name__ == '__main__':
 
     urls = [
         'https://www.koreabaseball.com/Record/Player/HitterBasic/BasicOld.aspx',
-        'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic1.aspx',
-        # 'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic2.aspx',
+        'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic2.aspx',
         'https://www.koreabaseball.com/Record/Player/HitterBasic/Detail1.aspx'
     ]
     
     for idx, url in enumerate(urls):
-        # if idx < 2:
-            
-            # driver.quit()
-            # continue
+        
+        # if idx != 1:
+        #     pass
+        #     # driver.quit()
+        #     # continue
+        # else:
         wait, driver = start_driver(url)
         # kbo_years = ["2024"]
         # print(idx)
